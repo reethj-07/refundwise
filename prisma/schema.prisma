@@ -1,0 +1,97 @@
+// RefundWise data model. SQLite locally (file), Turso (libSQL) on Vercel — both
+// via the @prisma/adapter-libsql driver adapter at runtime (see src/lib/db.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Customer {
+  id               String         @id @default(cuid())
+  customerId       String         @unique // business id, e.g. CUST-001
+  name             String
+  email            String         @unique
+  loyaltyTier      String // standard | gold | vip
+  accountCreatedAt DateTime
+  createdAt        DateTime       @default(now())
+  orders           Order[]
+  conversations    Conversation[]
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  orderId      String      @unique // business id, e.g. ORD-1001
+  customer     Customer    @relation(fields: [customerId], references: [id])
+  customerId   String
+  orderTotal   Float
+  orderDate    DateTime
+  deliveryDate DateTime? // null = unknown / not delivered
+  status       String // delivered | shipped | processing
+  isFinalSale  Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  items        OrderItem[]
+  refunds      Refund[]
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  order    Order  @relation(fields: [orderId], references: [id])
+  orderId  String
+  name     String
+  category String // apparel | electronics | home | perishable | digital | gift_card | accessories
+  price    Float
+  qty      Int    @default(1)
+}
+
+model Refund {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+  amount    Float
+  reason    String
+  kind      String // prior (seeded history) | issued (created by the agent)
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id            String          @id @default(cuid())
+  customer      Customer?       @relation(fields: [customerId], references: [id])
+  customerId    String?
+  customerRef   String? // raw email/id the customer provided
+  status        String          @default("OPEN") // OPEN | APPROVED | DENIED | ESCALATED
+  verdictAmount Float?
+  citedRules    String? // JSON array of rule ids
+  explanation   String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  messages      Message[]
+  steps         ReasoningStep[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  role           String // user | assistant
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model ReasoningStep {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  seq            Int
+  type           String // model_text | tool_call | tool_result | decision | error
+  name           String?
+  payload        String // JSON
+  provider       String?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, seq])
+}
