@@ -231,8 +231,10 @@ export async function issueRefund(
     data: { orderId: order.id, amount: args.amount, reason: args.reason, kind: "issued" },
   });
 
+  // Cite the affirmative basis for the approval (within window + delivered),
+  // not every passing check — keeps the customer message and verdict focused.
   const citedRules = evalResult.rules
-    .filter((r) => r.status === "PASS")
+    .filter((r) => ["R1", "R6"].includes(r.id) && r.status === "PASS")
     .map((r) => r.id);
 
   await prisma.conversation.update({
