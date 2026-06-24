@@ -158,7 +158,7 @@ admin trace shows exactly who answered.
 | `listOrders()` / `getOrder(orderId)` | The bound customer's orders only. |
 | `getRefundPolicy(topic?)` | Returns the relevant section(s) of `data/policy.md`. |
 | `checkRefundEligibility(orderId)` | **Deterministic** per-rule evaluation + recommendation. |
-| `issueRefund(orderId, amount, reason)` | Approve — re-validated against policy; idempotent. |
+| `issueRefund(orderId, amount, reason, items?)` | Approve — full (amount = order total) or partial (pass returned `items: [{itemId, qty}]`, amount = their price×qty). Re-validated against policy; idempotent; high-value orders are rejected for escalation even as a partial. |
 | `denyRefund(orderId, reason, citedRuleIds)` | Deny with cited rules. |
 | `escalateToHuman(reason, citedRuleIds)` | Escalate for human review. |
 
@@ -179,8 +179,8 @@ Policy (`data/policy.md`, numbered & testable):
 - **R5** Refunds **>= $500** must be escalated (never auto-approved).
 - **R6** Only `delivered` orders are refundable.
 - **R7** Missing/invalid data -> escalate.
-- **Goodwill grace**: gold/vip up to **7 days** past their window -> escalate.
-- **Precedence**: hard denials (R2, R3, R4, R6) -> escalations (R5, R7, grace) -> window (R1) -> eligible.
+- **R8** Goodwill grace: gold/vip up to **7 days** past their window -> escalate.
+- **Precedence**: hard denials (R2, R3, R4, R6) -> escalations (R5, R7, R8) -> window (R1) -> eligible.
   *(So a final-sale item is denied even if it's high-value; a gift card is denied even for a VIP.)*
 
 You can sanity-check the spine against every seeded order:
@@ -200,8 +200,8 @@ valid whenever you seed.
 | # | Customer | Tier | Scenario | Expected |
 |--|--|--|--|--|
 | 001 | ava.thompson | standard | In-window apparel | **APPROVE** |
-| 002 | ben.carter | gold | 40 days — gold's 45-day window | **APPROVE** (loyalty) |
-| 003 | chloe.nguyen | vip | 55 days — vip's 60-day window | **APPROVE** (loyalty) |
+| 002 | ben.carter | gold | 35 days — gold's 45-day window | **APPROVE** (loyalty) |
+| 003 | chloe.nguyen | vip | 50 days — vip's 60-day window | **APPROVE** (loyalty) |
 | 004 | diego.ramirez | standard | 45 days — past window | **DENY** (R1) |
 | 005 | emma.wilson | standard | Final-sale item | **DENY** (R2) |
 | 006 | frank.olsen | standard | Perishable (+ a digital order) | **DENY** (R3) |
@@ -209,13 +209,17 @@ valid whenever you seed.
 | 008 | henry.patel | standard | $850 TV | **ESCALATE** (R5) |
 | 009 | isla.brooks | standard | Not delivered (shipped) | **DENY** (R6) |
 | 010 | jack.turner | standard | Delivered but no delivery date | **ESCALATE** (R7) |
-| 011 | karen.diaz | vip | 63 days — 3 past vip window | **ESCALATE** (grace) |
+| 011 | karen.diaz | vip | 62 days — 2 past vip window | **ESCALATE** (R8 grace) |
 | 012 | liam.foster | gold | 3-item order, return one item | **APPROVE** (partial) |
 | 013 | mia.scott | standard | 3 orders, vague request | **APPROVE** after disambiguation |
 | 014 | noah.green | standard | $900 **and** final sale | **DENY** (R2 beats R5) |
 | 015 | olivia.reed | vip | Gift card | **DENY** (R3 beats loyalty) |
 
 Plus an **unknown-email** test (any email not in the DB) for graceful "customer not found" handling.
+
+> **Reseed right before a demo.** Dates are day-offsets from seed time, so the boundary scenarios drift as
+> real days pass. The offsets leave several days of margin, but for a clean demo run `npm run db:seed`
+> beforehand (it also resets any verdicts written by earlier runs).
 
 ---
 
@@ -309,6 +313,12 @@ Everything runs on free tiers: **Vercel Hobby** + **Turso** (free SQLite-compati
   code; the runtime uses the libSQL driver adapter (Prisma 7 has no bundled query engine).
 - **Symmetric terminal tools** (`issueRefund` / `denyRefund` / `escalateToHuman`) so all three verdicts are
   captured identically and structurally.
+- **Customer identity is self-asserted (no auth).** A customer is bound to a conversation purely by the
+  email / customer ID they type into `lookupCustomer` — there is no password or session. This is a conscious
+  take-home scoping decision: it keeps the demo frictionless while still enforcing that, *once bound*, an
+  agent can only ever touch that customer's data (no cross-customer leakage). In the real world this is the
+  main gap — identity would come from an authenticated session, not a self-asserted email — and admin access
+  would be authenticated too (see below).
 
 ## What I'd do with more time
 

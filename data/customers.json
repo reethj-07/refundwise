@@ -30,12 +30,12 @@
       "accountCreatedDaysAgo": 800,
       "scenario": "Loyalty exception — gold tier inside 45d window (a standard customer would be denied)",
       "expected": "APPROVE",
-      "rule": "R1 pass via gold window (40d ≤ 45d)",
+      "rule": "R1 pass via gold window (35d ≤ 45d)",
       "orders": [
         {
           "orderId": "ORD-1002",
-          "orderDateDaysAgo": 44,
-          "deliveryDateDaysAgo": 40,
+          "orderDateDaysAgo": 39,
+          "deliveryDateDaysAgo": 35,
           "status": "delivered",
           "isFinalSale": false,
           "items": [{ "name": "Oak Desk Lamp", "category": "home", "price": 95, "qty": 1 }],
@@ -51,12 +51,12 @@
       "accountCreatedDaysAgo": 1200,
       "scenario": "Loyalty exception — vip tier inside 60d window",
       "expected": "APPROVE",
-      "rule": "R1 pass via vip window (55d ≤ 60d)",
+      "rule": "R1 pass via vip window (50d ≤ 60d)",
       "orders": [
         {
           "orderId": "ORD-1003",
-          "orderDateDaysAgo": 59,
-          "deliveryDateDaysAgo": 55,
+          "orderDateDaysAgo": 54,
+          "deliveryDateDaysAgo": 50,
           "status": "delivered",
           "isFinalSale": false,
           "items": [{ "name": "Leather Chelsea Boots", "category": "apparel", "price": 130, "qty": 1 }],
@@ -228,12 +228,12 @@
       "accountCreatedDaysAgo": 1500,
       "scenario": "Edge — vip just past window, within 7-day goodwill grace",
       "expected": "ESCALATE",
-      "rule": "Goodwill grace (63d = 3d past vip 60d window)",
+      "rule": "Goodwill grace (62d = 2d past vip 60d window, 5d below the 67d grace edge)",
       "orders": [
         {
           "orderId": "ORD-1011",
-          "orderDateDaysAgo": 67,
-          "deliveryDateDaysAgo": 63,
+          "orderDateDaysAgo": 66,
+          "deliveryDateDaysAgo": 62,
           "status": "delivered",
           "isFinalSale": false,
           "items": [{ "name": "Cashmere Scarf", "category": "apparel", "price": 140, "qty": 1 }],
