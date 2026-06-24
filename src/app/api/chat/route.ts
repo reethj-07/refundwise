@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
   }
   const conversationId = conversation.id;
   const boundCustomerId = conversation.customerId ?? null;
+  const initialStatus = (conversation.status ?? "OPEN") as ConversationStatus;
 
   const history: LlmMessage[] = conversation.messages.map((m) =>
     m.role === "assistant"
@@ -107,6 +108,7 @@ export async function POST(req: NextRequest) {
         const result = await runAgent({
           conversationId,
           resolvedCustomerId: boundCustomerId,
+          initialStatus,
           history,
           userText: message,
           record,
@@ -118,14 +120,19 @@ export async function POST(req: NextRequest) {
         });
         send({ type: "assistant", content: result.finalText });
 
-        const convo = await prisma.conversation.findUnique({ where: { id: conversationId } });
-        send({
-          type: "verdict",
-          status: (convo?.status ?? result.status) as ConversationStatus,
-          amount: convo?.verdictAmount ?? null,
-          citedRules: parseCitedRules(convo?.citedRules ?? null),
-          explanation: convo?.explanation ?? result.finalText,
-        });
+        // Only push a verdict when this turn actually decided something. A
+        // conversational turn (greeting, clarification, post-resolution thanks)
+        // leaves the stored verdict untouched, so re-emitting it would be misleading.
+        if (result.resolvedThisTurn) {
+          const convo = await prisma.conversation.findUnique({ where: { id: conversationId } });
+          send({
+            type: "verdict",
+            status: (convo?.status ?? result.status) as ConversationStatus,
+            amount: convo?.verdictAmount ?? null,
+            citedRules: parseCitedRules(convo?.citedRules ?? null),
+            explanation: convo?.explanation ?? result.finalText,
+          });
+        }
       } catch (err) {
         send({ type: "error", message: err instanceof Error ? err.message : String(err) });
       } finally {
