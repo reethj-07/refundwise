@@ -28,7 +28,7 @@ type OrderWithRels = {
   deliveryDate: Date | null;
   status: string;
   isFinalSale: boolean;
-  items: { name: string; category: string; price: number; qty: number }[];
+  items: { id: string; name: string; category: string; price: number; qty: number }[];
   refunds: { amount: number; reason: string; kind: string; createdAt: Date }[];
 };
 
@@ -43,6 +43,7 @@ function orderSummary(o: OrderWithRels) {
     isFinalSale: o.isFinalSale,
     alreadyRefunded: o.refunds.some((r) => r.kind === "issued"),
     items: o.items.map((i) => ({
+      itemId: i.id,
       name: i.name,
       category: i.category,
       price: i.price,
@@ -101,7 +102,7 @@ export async function lookupCustomer(
 }
 
 // ── listOrders ───────────────────────────────────────────────────────────────
-export async function listOrders(ctx: ToolContext, _args: Record<string, never>) {
+export async function listOrders(ctx: ToolContext) {
   if (!ctx.resolvedCustomerId) {
     return { error: "Identify the customer first with lookupCustomer." };
   }
@@ -172,7 +173,12 @@ export async function checkRefundEligibility(
 // ── issueRefund (APPROVE) — guarded ──────────────────────────────────────────
 export async function issueRefund(
   ctx: ToolContext,
-  args: { orderId: string; amount: number; reason: string },
+  args: {
+    orderId: string;
+    amount: number;
+    reason: string;
+    items?: { itemId: string; qty: number }[];
+  },
 ) {
   if (!ctx.resolvedCustomerId) {
     return { ok: false, error: "Identify the customer first with lookupCustomer." };
@@ -212,6 +218,17 @@ export async function issueRefund(
       error: `Amount $${args.amount} exceeds the order total $${order.orderTotal}.`,
     };
   }
+  // R5 (order level): a high-value order must be escalated, never auto-refunded —
+  // and that applies to PARTIALS too. A $499 partial on an $850 order is still a
+  // refund against a high-value order and must go to a human.
+  if (order.orderTotal >= config.highValueThreshold) {
+    return {
+      ok: false,
+      error: `Order total $${order.orderTotal} is at/above the $${config.highValueThreshold} threshold (R5) — high-value orders must be escalated, not auto-refunded (even a partial).`,
+      mustEscalate: true,
+    };
+  }
+  // R5 (amount level): the requested amount itself must be below the threshold.
   if (args.amount >= config.highValueThreshold) {
     return {
       ok: false,
@@ -219,6 +236,43 @@ export async function issueRefund(
       mustEscalate: true,
     };
   }
+
+  // The amount must correspond to a real basis: either the full order total, or
+  // the exact sum of price×qty of an actual returned-item subset. This stops an
+  // arbitrary partial amount that isn't tied to anything the customer returned.
+  const isPartial = !!args.items && args.items.length > 0;
+  if (isPartial) {
+    const byId = new Map(order.items.map((i) => [i.id, i]));
+    let expected = 0;
+    for (const reqItem of args.items!) {
+      const oi = byId.get(reqItem.itemId);
+      if (!oi) {
+        return {
+          ok: false,
+          error: `Item "${reqItem.itemId}" is not part of order ${order.orderId}. Use the itemId values from the order details.`,
+        };
+      }
+      if (!Number.isInteger(reqItem.qty) || reqItem.qty <= 0 || reqItem.qty > oi.qty) {
+        return {
+          ok: false,
+          error: `Invalid quantity ${reqItem.qty} for "${oi.name}" — the order has ${oi.qty} of this item.`,
+        };
+      }
+      expected += oi.price * reqItem.qty;
+    }
+    if (Math.abs(expected - args.amount) > 0.001) {
+      return {
+        ok: false,
+        error: `Partial refund amount $${args.amount} does not match the returned items' total $${expected} (sum of price×qty).`,
+      };
+    }
+  } else if (Math.abs(args.amount - order.orderTotal) > 0.001) {
+    return {
+      ok: false,
+      error: `Amount $${args.amount} is neither the full order total ($${order.orderTotal}) nor tied to a returned-item subset. For a partial refund, pass the returned items.`,
+    };
+  }
+
   if (evalResult.recommendation !== "ELIGIBLE") {
     return {
       ok: false,

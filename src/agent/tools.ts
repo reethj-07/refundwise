@@ -41,7 +41,7 @@ export const tools: ToolDef[] = [
     parameters: obj({}),
     zod: z.object({}),
     terminal: false,
-    handler: (ctx) => impl.listOrders(ctx, {}),
+    handler: (ctx) => impl.listOrders(ctx),
   },
   {
     name: "getOrder",
@@ -73,18 +73,35 @@ export const tools: ToolDef[] = [
   {
     name: "issueRefund",
     description:
-      "APPROVE and record a refund for an eligible order. Use the order total for a full refund, or the sum of price×qty of the returned items for a partial refund. This is re-validated against policy and will be rejected if the order is ineligible, already refunded, or the amount is at/above the escalation threshold.",
+      "APPROVE and record a refund for an eligible order. For a FULL refund, set amount to the order total and omit items. For a PARTIAL refund (the customer returns only some items), pass the returned items as { itemId, qty } using the itemId values from the order details, and set amount to the exact sum of price×qty of those items. Re-validated against policy: rejected if the order is ineligible, already refunded, the order total or amount is at/above the escalation threshold (escalate instead), or the amount doesn't match the full total / the specified returned items.",
     parameters: obj(
       {
         orderId: str("The order ID to refund."),
-        amount: { type: "number", description: "Refund amount in USD (≤ order total, below the escalation threshold)." },
+        amount: { type: "number", description: "Refund amount in USD: the order total for a full refund, or the sum of price×qty of the returned items for a partial." },
         reason: str("Short customer-facing reason / note for the refund."),
+        items: {
+          type: "array",
+          description: "For a PARTIAL refund only: the returned items. Omit for a full refund.",
+          items: obj(
+            {
+              itemId: str("The itemId of a returned item, taken from the order details."),
+              qty: { type: "integer", description: "How many of this item are being returned (≤ the quantity on the order)." },
+            },
+            ["itemId", "qty"],
+          ),
+        },
       },
       ["orderId", "amount", "reason"],
     ),
-    zod: z.object({ orderId: z.string().min(1), amount: z.number().positive(), reason: z.string().min(1) }),
+    zod: z.object({
+      orderId: z.string().min(1),
+      amount: z.number().positive(),
+      reason: z.string().min(1),
+      items: z.array(z.object({ itemId: z.string().min(1), qty: z.number().int().positive() })).optional(),
+    }),
     terminal: true,
-    handler: (ctx, a) => impl.issueRefund(ctx, a as { orderId: string; amount: number; reason: string }),
+    handler: (ctx, a) =>
+      impl.issueRefund(ctx, a as { orderId: string; amount: number; reason: string; items?: { itemId: string; qty: number }[] }),
   },
   {
     name: "denyRefund",
