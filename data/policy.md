@@ -56,12 +56,18 @@ or report a delivery problem for human review).
 If required data is missing or the order cannot be found — for example, no delivery date is on file, or the
 order ID does not exist for this customer — the agent must **escalate to a human** rather than guess.
 
+## R8 — Goodwill grace (gold/vip)
+
+For `gold` and `vip` customers whose order is **up to 7 days past** their return window (R1), the request is
+**escalated** for a goodwill review — it is *not* auto-approved. Beyond 7 days past the window, deny under R1.
+This grace does not apply to `standard` customers.
+
 ---
 
 ## Loyalty tiers & goodwill grace
 
 - Standard, gold, and vip differ only by the return window in **R1**.
-- **Goodwill grace:** for `gold` and `vip` customers whose order is **up to 7 days past** their return
+- **Goodwill grace (R8):** for `gold` and `vip` customers whose order is **up to 7 days past** their return
   window, the request is **escalated** for a goodwill review (it is *not* auto-approved). Beyond 7 days past
   the window, deny under R1.
 
@@ -79,7 +85,7 @@ Evaluate in this order; the first matching outcome wins:
 1. **Hard denials** — R2 (final sale), R3 (non-refundable category), R4 (already refunded), R6 (not
    delivered). These override loyalty tier and value. *(A final-sale or gift-card item is denied even if it
    is high value.)*
-2. **Escalations** — R5 (≥ $500), R7 (missing/invalid data), and gold/vip goodwill grace.
+2. **Escalations** — R5 (≥ $500), R7 (missing/invalid data), and R8 (gold/vip goodwill grace).
 3. **Window** — R1: if outside the tier's window (and no grace applies), deny.
 4. Otherwise the refund is **eligible** (full, or partial for the specified items).
 

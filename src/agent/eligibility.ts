@@ -98,7 +98,7 @@ export function evaluateEligibility(input: EligibilityInput): EligibilityResult 
     daysSinceDelivery !== null &&
     daysSinceDelivery > windowDays &&
     daysSinceDelivery <= windowDays + grace;
-  add("GRACE", `Goodwill grace (${grace}d, gold/vip)`, graceApplies ? "ESCALATE" : "NA",
+  add("R8", `Goodwill grace (${grace}d, gold/vip)`, graceApplies ? "ESCALATE" : "NA",
     graceApplies
       ? `${daysSinceDelivery! - windowDays}d past window but within the ${grace}d grace — needs human goodwill review.`
       : "Not applicable.");
@@ -125,7 +125,7 @@ export function evaluateEligibility(input: EligibilityInput): EligibilityResult 
     summary = `ESCALATE — R5: refund amount $${amount} ≥ $${threshold} threshold.`;
   } else if (graceApplies) {
     recommendation = "ESCALATE";
-    summary = `ESCALATE — goodwill grace for ${input.loyaltyTier} customer ${daysSinceDelivery! - windowDays}d past window.`;
+    summary = `ESCALATE — R8: goodwill grace for ${input.loyaltyTier} customer ${daysSinceDelivery! - windowDays}d past window.`;
   } else if (daysSinceDelivery !== null && daysSinceDelivery > windowDays) {
     recommendation = "INELIGIBLE";
     summary = `INELIGIBLE — R1: ${daysSinceDelivery}d past the ${windowDays}d window.`;
