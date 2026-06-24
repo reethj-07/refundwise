@@ -1,0 +1,351 @@
+{
+  "_comment": "Source-of-truth CRM data for RefundWise. Dates are stored as day-offsets from seed time so scenarios stay valid forever; the seed converts them to absolute timestamps. orderTotal is computed from items at seed time. The `scenario`, `expected`, and `rule` fields are documentation (not stored) describing which policy branch each profile exercises. An UNKNOWN-EMAIL scenario (e.g. nobody@nowhere.com) is also tested but needs no profile.",
+  "customers": [
+    {
+      "customerId": "CUST-001",
+      "name": "Ava Thompson",
+      "email": "ava.thompson@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 420,
+      "scenario": "Clean eligible refund — standard tier, well within window",
+      "expected": "APPROVE",
+      "rule": "R1 pass (8d ≤ 30d), delivered, refundable",
+      "orders": [
+        {
+          "orderId": "ORD-1001",
+          "orderDateDaysAgo": 12,
+          "deliveryDateDaysAgo": 8,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Merino Wool Sweater", "category": "apparel", "price": 60, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-002",
+      "name": "Ben Carter",
+      "email": "ben.carter@example.com",
+      "loyaltyTier": "gold",
+      "accountCreatedDaysAgo": 800,
+      "scenario": "Loyalty exception — gold tier inside 45d window (a standard customer would be denied)",
+      "expected": "APPROVE",
+      "rule": "R1 pass via gold window (40d ≤ 45d)",
+      "orders": [
+        {
+          "orderId": "ORD-1002",
+          "orderDateDaysAgo": 44,
+          "deliveryDateDaysAgo": 40,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Oak Desk Lamp", "category": "home", "price": 95, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-003",
+      "name": "Chloe Nguyen",
+      "email": "chloe.nguyen@example.com",
+      "loyaltyTier": "vip",
+      "accountCreatedDaysAgo": 1200,
+      "scenario": "Loyalty exception — vip tier inside 60d window",
+      "expected": "APPROVE",
+      "rule": "R1 pass via vip window (55d ≤ 60d)",
+      "orders": [
+        {
+          "orderId": "ORD-1003",
+          "orderDateDaysAgo": 59,
+          "deliveryDateDaysAgo": 55,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Leather Chelsea Boots", "category": "apparel", "price": 130, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-004",
+      "name": "Diego Ramirez",
+      "email": "diego.ramirez@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 300,
+      "scenario": "Outside the return window",
+      "expected": "DENY",
+      "rule": "R1 fail (45d > 30d), no grace for standard",
+      "orders": [
+        {
+          "orderId": "ORD-1004",
+          "orderDateDaysAgo": 49,
+          "deliveryDateDaysAgo": 45,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Canvas Backpack", "category": "home", "price": 80, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-005",
+      "name": "Emma Wilson",
+      "email": "emma.wilson@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 150,
+      "scenario": "Final-sale item (non-refundable even though in window)",
+      "expected": "DENY",
+      "rule": "R2 final sale",
+      "orders": [
+        {
+          "orderId": "ORD-1005",
+          "orderDateDaysAgo": 8,
+          "deliveryDateDaysAgo": 5,
+          "status": "delivered",
+          "isFinalSale": true,
+          "items": [{ "name": "Clearance Puffer Jacket", "category": "apparel", "price": 120, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-006",
+      "name": "Frank Olsen",
+      "email": "frank.olsen@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 95,
+      "scenario": "Non-refundable categories (perishable primary; also has a digital order)",
+      "expected": "DENY",
+      "rule": "R3 category (perishable / digital)",
+      "orders": [
+        {
+          "orderId": "ORD-1006",
+          "orderDateDaysAgo": 4,
+          "deliveryDateDaysAgo": 3,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Organic Strawberries (2 lb)", "category": "perishable", "price": 40, "qty": 1 }],
+          "priorRefunds": []
+        },
+        {
+          "orderId": "ORD-1006D",
+          "orderDateDaysAgo": 6,
+          "deliveryDateDaysAgo": 6,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Photo Editing Software License", "category": "digital", "price": 25, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-007",
+      "name": "Grace Kim",
+      "email": "grace.kim@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 260,
+      "scenario": "Order already refunded once",
+      "expected": "DENY",
+      "rule": "R4 one refund per order",
+      "orders": [
+        {
+          "orderId": "ORD-1007",
+          "orderDateDaysAgo": 15,
+          "deliveryDateDaysAgo": 12,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Bluetooth Speaker", "category": "electronics", "price": 110, "qty": 1 }],
+          "priorRefunds": [{ "amount": 110, "reason": "Returned once already — defective unit replaced and refunded" }]
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-008",
+      "name": "Henry Patel",
+      "email": "henry.patel@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 510,
+      "scenario": "High-value order requiring human escalation",
+      "expected": "ESCALATE",
+      "rule": "R5 high value (≥ $500)",
+      "orders": [
+        {
+          "orderId": "ORD-1008",
+          "orderDateDaysAgo": 9,
+          "deliveryDateDaysAgo": 6,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "55\" 4K OLED TV", "category": "electronics", "price": 850, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-009",
+      "name": "Isla Brooks",
+      "email": "isla.brooks@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 70,
+      "scenario": "Order not yet delivered (still shipped)",
+      "expected": "DENY",
+      "rule": "R6 not delivered",
+      "orders": [
+        {
+          "orderId": "ORD-1009",
+          "orderDateDaysAgo": 4,
+          "deliveryDateDaysAgo": null,
+          "status": "shipped",
+          "isFinalSale": false,
+          "items": [{ "name": "Trail Running Shoes", "category": "apparel", "price": 70, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-010",
+      "name": "Jack Turner",
+      "email": "jack.turner@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 180,
+      "scenario": "Missing data — delivered but no delivery date on file",
+      "expected": "ESCALATE",
+      "rule": "R7 missing/invalid data",
+      "orders": [
+        {
+          "orderId": "ORD-1010",
+          "orderDateDaysAgo": 10,
+          "deliveryDateDaysAgo": null,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Drip Coffee Maker", "category": "home", "price": 90, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-011",
+      "name": "Karen Diaz",
+      "email": "karen.diaz@example.com",
+      "loyaltyTier": "vip",
+      "accountCreatedDaysAgo": 1500,
+      "scenario": "Edge — vip just past window, within 7-day goodwill grace",
+      "expected": "ESCALATE",
+      "rule": "Goodwill grace (63d = 3d past vip 60d window)",
+      "orders": [
+        {
+          "orderId": "ORD-1011",
+          "orderDateDaysAgo": 67,
+          "deliveryDateDaysAgo": 63,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Cashmere Scarf", "category": "apparel", "price": 140, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-012",
+      "name": "Liam Foster",
+      "email": "liam.foster@example.com",
+      "loyaltyTier": "gold",
+      "accountCreatedDaysAgo": 640,
+      "scenario": "Partial refund — multi-item order, customer returns one item",
+      "expected": "APPROVE (partial)",
+      "rule": "R1 pass; partial amount = item price × qty",
+      "orders": [
+        {
+          "orderId": "ORD-1012",
+          "orderDateDaysAgo": 13,
+          "deliveryDateDaysAgo": 10,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [
+            { "name": "Cork Yoga Mat", "category": "home", "price": 45, "qty": 1 },
+            { "name": "Steel Water Bottle", "category": "home", "price": 20, "qty": 2 },
+            { "name": "Resistance Bands Set", "category": "home", "price": 25, "qty": 1 }
+          ],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-013",
+      "name": "Mia Scott",
+      "email": "mia.scott@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 220,
+      "scenario": "Multiple orders, vague request — agent must list orders and disambiguate",
+      "expected": "APPROVE (the one eligible order, ORD-1013B)",
+      "rule": "listOrders + R1; one eligible, one out-of-window, one not delivered",
+      "orders": [
+        {
+          "orderId": "ORD-1013A",
+          "orderDateDaysAgo": 54,
+          "deliveryDateDaysAgo": 50,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Linen Throw Pillow", "category": "home", "price": 50, "qty": 1 }],
+          "priorRefunds": []
+        },
+        {
+          "orderId": "ORD-1013B",
+          "orderDateDaysAgo": 12,
+          "deliveryDateDaysAgo": 9,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "Rain Jacket", "category": "apparel", "price": 75, "qty": 1 }],
+          "priorRefunds": []
+        },
+        {
+          "orderId": "ORD-1013C",
+          "orderDateDaysAgo": 2,
+          "deliveryDateDaysAgo": null,
+          "status": "processing",
+          "isFinalSale": false,
+          "items": [{ "name": "Ceramic Mug Set", "category": "home", "price": 60, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-014",
+      "name": "Noah Green",
+      "email": "noah.green@example.com",
+      "loyaltyTier": "standard",
+      "accountCreatedDaysAgo": 330,
+      "scenario": "Precedence — high value AND final sale (hard denial outranks escalation)",
+      "expected": "DENY",
+      "rule": "R2 final sale beats R5 high value",
+      "orders": [
+        {
+          "orderId": "ORD-1014",
+          "orderDateDaysAgo": 9,
+          "deliveryDateDaysAgo": 6,
+          "status": "delivered",
+          "isFinalSale": true,
+          "items": [{ "name": "Designer Automatic Watch", "category": "accessories", "price": 900, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    },
+    {
+      "customerId": "CUST-015",
+      "name": "Olivia Reed",
+      "email": "olivia.reed@example.com",
+      "loyaltyTier": "vip",
+      "accountCreatedDaysAgo": 980,
+      "scenario": "Precedence — vip with a gift card (category beats loyalty)",
+      "expected": "DENY",
+      "rule": "R3 non-refundable category beats vip loyalty",
+      "orders": [
+        {
+          "orderId": "ORD-1015",
+          "orderDateDaysAgo": 9,
+          "deliveryDateDaysAgo": 7,
+          "status": "delivered",
+          "isFinalSale": false,
+          "items": [{ "name": "$100 Digital Gift Card", "category": "gift_card", "price": 100, "qty": 1 }],
+          "priorRefunds": []
+        }
+      ]
+    }
+  ]
+}
