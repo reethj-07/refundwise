@@ -41,7 +41,13 @@ async function main() {
   const client = createClient({ url, authToken });
   console.log(`→ Applying ${statements.length} statements to Turso …`);
   for (const stmt of statements) {
-    await client.execute(stmt);
+    try {
+      await client.execute(stmt);
+    } catch (e) {
+      // Idempotent: ignore "table/index already exists" so this can be re-run.
+      if (/already exists/i.test((e as Error).message ?? "")) continue;
+      throw e;
+    }
   }
   await client.close();
   console.log("→ Schema applied. Seeding …");
