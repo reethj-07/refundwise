@@ -271,21 +271,23 @@ src/
 
 Everything runs on free tiers: **Vercel Hobby** + **Turso** (free SQLite-compatible DB) + a free LLM key.
 
-1. **Create a free Turso DB** (one-time):
-   ```bash
-   # install the turso CLI, then:
-   turso db create refundwise
-   turso db show refundwise --url          # -> TURSO_DATABASE_URL
-   turso db tokens create refundwise       # -> TURSO_AUTH_TOKEN
+1. **Create a free Turso database** at [turso.tech](https://turso.tech) (or via the Turso CLI). Copy its
+   **database URL** (`libsql://…`) and create an **auth token**.
+2. **Apply the schema + seed it — no Turso CLI needed.** Put the two values in `.env.local`:
    ```
-2. **Apply the schema + seed to Turso** (one-time), e.g.:
-   ```bash
-   npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > schema.sql
-   turso db shell refundwise < schema.sql
-   TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... npm run db:seed
+   TURSO_DATABASE_URL=libsql://…
+   TURSO_AUTH_TOKEN=…
    ```
-3. **Import the repo on Vercel** and set env vars: `GEMINI_API_KEY` (and/or `GROQ_API_KEY`),
+   then run:
+   ```bash
+   npm run db:turso
+   ```
+   This applies the schema to Turso over the network and seeds the 15 customers.
+3. **Import the repo on Vercel** and set the project env vars: `GEMINI_API_KEY` (and/or `GROQ_API_KEY`),
    `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `NEXT_PUBLIC_VOICE_ENABLED=true`. Deploy.
+
+> Tip: remove `TURSO_*` from `.env.local` afterwards if you want local `npm run dev` to keep using the
+> local SQLite file instead of Turso.
 
 `postinstall` runs `prisma generate`; the streaming routes set `maxDuration = 60` (within Hobby limits);
 `runtime = "nodejs"` everywhere Prisma is used.

@@ -12,6 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "prisma db push && prisma generate && tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "db:turso": "tsx scripts/setup-turso.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
