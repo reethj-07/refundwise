@@ -1,19 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+
+// Whether the browser exposes SpeechRecognition. Read via useSyncExternalStore so
+// it's SSR-safe (server snapshot is always false, so no hydration mismatch) without
+// calling setState inside an effect. Support never changes, so we never resubscribe.
+const subscribe = () => () => {};
+const getSupported = () => {
+  const w = window as any;
+  return !!(w.SpeechRecognition || w.webkitSpeechRecognition);
+};
 
 // Browser Web Speech API — speech-to-text (SpeechRecognition) and
 // text-to-speech (SpeechSynthesis). No external services, no API keys.
 export function useSpeech() {
-  const [supported, setSupported] = useState(false);
+  const supported = useSyncExternalStore(subscribe, getSupported, () => false);
   const [listening, setListening] = useState(false);
   const recRef = useRef<any>(null);
-
-  useEffect(() => {
-    const w = window as any;
-    setSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
-  }, []);
 
   const listen = useCallback((onResult: (text: string) => void) => {
     const w = window as any;
